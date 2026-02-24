@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Planner | Fintech Dashboard V15.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root {
+            --primary-blue: #003B73; --primary-light: #0056A8; --accent-orange: #F26E21;
+            --bg-light: #F0F4F8; --text-dark: #2C3E50; --text-muted: #607D8B; --card-bg: rgba(255, 255, 255, 0.95);
+            --border-color: #E4E8F0; --input-bg: #F8FAFC;
+        }
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: var(--bg-light); border-left: 1px solid var(--border-color); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 10px; border: 3px solid var(--bg-light); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+        
+        body.dark-mode {
+            --primary-blue: #38BDF8; --primary-light: #0EA5E9; --accent-orange: #F97316;
+            --bg-light: #0F172A; --text-dark: #F8FAFC; --text-muted: #94A3B8; --card-bg: rgba(30, 41, 59, 0.85);
+            --border-color: #334155; --input-bg: #1E293B;
+        }
+        body.dark-mode .calc-box, body.dark-mode .result-card, body.dark-mode .faq-section { background-color: #1E293B; border-color: #334155;}
+        body.dark-mode .input-wrapper input { color: #FFF; }
+        body.dark-mode .bg-dream-scene { opacity: 0.2; filter: brightness(0.4) grayscale(0.2); }
+        body.dark-mode .insight-box { background-color: rgba(245, 158, 11, 0.1); border-left-color: #F59E0B; }
+        body.dark-mode .insight-text { color: #E2E8F0; }
+        body.dark-mode .alert-box { background-color: rgba(230, 81, 0, 0.1); border-color: rgba(230, 81, 0, 0.2); border-left-color: #FF9800; color: #FFB74D; }
+        body.dark-mode .dashboard-header, body.dark-mode .contact-footer { background: rgba(30, 41, 59, 0.75); border-color: rgba(255,255,255,0.1); box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        body.dark-mode .contact-item { color: #F8FAFC; background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.1); }
+        body.dark-mode .faq-title { color: #38BDF8; border-bottom-color: #334155;}
+        body.dark-mode .faq-item h4 { color: #F97316; }
+
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-light); color: var(--text-dark); margin: 0; padding: 0; box-sizing: border-box; overflow-x: hidden; min-height: 100vh; transition: background-color 0.5s, color 0.5s; }
+        
+        .bg-dream-scene { 
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 100%; 
+            background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2560&auto=format&fit=crop'); 
+            background-size: cover; background-position: center bottom; z-index: -3; opacity: 0.85; transition: 0.5s; 
+        }
+
+        .falling-leaf-global {
+            position: fixed; top: -10%; z-index: -2; width: 20px; height: 20px; 
+            border-radius: 50% 0 50% 0; opacity: 0.85; pointer-events: none;
+            box-shadow: inset 2px -2px 5px rgba(0,0,0,0.15); 
+        }
+        @keyframes fall-global {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--fall-drift), 110vh) rotate(var(--fall-rotate)); opacity: 0; }
+        }
+
+        .navbar { background: linear-gradient(90deg, #003B73 0%, #0056A8 100%); padding: 15px 40px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); position: relative; z-index: 10; }
+        .navbar h1 { margin: 0; font-size: 22px; font-weight: 800; cursor: pointer; } .navbar span { color: #F26E21; }
+        .nav-btn { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.6); color: white; padding: 8px 20px; border-radius: 50px; cursor: pointer; font-weight: 600; font-family: 'Poppins', sans-serif; transition: 0.3s; backdrop-filter: blur(5px); display: flex; gap: 8px; align-items: center;}
+        .nav-btn:hover { background-color: white; color: #003B73; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
+        .btn-pdf { background: #FF3D00; border-color: #FF3D00; } .btn-pdf:hover { background: #DD2C00; color: white; box-shadow: 0 0 15px rgba(255,61,0,0.5); }
+
+        .container { max-width: 1000px; margin: 50px auto; padding: 0 25px 80px 25px; position: relative; z-index: 2; }
+        .app-section { display: none; animation: fadeIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
+        .app-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        .dashboard-header { text-align: center; margin-bottom: 50px; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); padding: 35px 20px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 15px 35px rgba(0, 59, 115, 0.1); max-width: 750px; margin-left: auto; margin-right: auto; transition: 0.5s; }
+        .dashboard-header h2 { font-size: 42px; color: var(--primary-blue); margin-top: 0; margin-bottom: 15px; font-weight: 800; line-height: 1.2; }
+        .dashboard-header p { color: var(--text-dark); font-size: 18px; font-weight: 600; max-width: 600px; margin: 0 auto; line-height: 1.6;}
+
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+        .menu-card { background: var(--card-bg); backdrop-filter: blur(20px); border-radius: 24px; padding: 40px 30px; text-align: center; cursor: pointer; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-color); transition: all 0.5s; position: relative; overflow: hidden; height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .menu-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 24px; border: 3px solid transparent; background: linear-gradient(135deg, var(--primary-blue), var(--accent-orange)) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: destination-out; mask-composite: exclude; opacity: 0; transition: 0.5s ease; }
+        .menu-card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 25px 60px var(--primary-light); background: var(--card-bg); border-color: transparent;}
+        .menu-card:hover::before { opacity: 1; }
+        .menu-content-wrapper { transition: transform 0.5s; width: 100%; } .menu-card:hover .menu-content-wrapper { transform: translateY(-40px); }
+        .menu-icon { font-size: 60px; margin-bottom: 15px; color: var(--primary-blue); transition: 0.5s ease; } .menu-card:hover .menu-icon { transform: scale(1.1) rotate(5deg); color: var(--accent-orange); }
+        .menu-title { font-size: 20px; font-weight: 800; color: var(--primary-blue); margin-bottom: 0; transition: 0.3s; }
+        .menu-card:hover .menu-title { color: var(--accent-orange); }
+        .menu-desc { position: absolute; bottom: 35px; left: 30px; right: 30px; font-size: 13px; color: var(--text-muted); line-height: 1.6; opacity: 0; transform: translateY(25px); transition: all 0.5s; font-weight: 600; }
+        .menu-card:hover .menu-desc { opacity: 1; transform: translateY(0); }
+        .badge-locked { position: absolute; top: 25px; right: -35px; background: #CFD8DC; color: #FFF; font-size: 11px; font-weight: 800; padding: 8px 40px; transform: rotate(45deg); letter-spacing: 1px; }
+
+        .contact-footer { margin-top: 30px; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); padding: 25px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 15px 35px rgba(0, 59, 115, 0.05); text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; transition: 0.5s; }
+        .contact-footer h3 { color: var(--primary-blue); margin: 0; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;}
+        .contact-details { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        .contact-item { display: inline-flex; align-items: center; gap: 8px; color: var(--text-dark); font-size: 14.5px; font-weight: 600; background: rgba(255,255,255,0.5); padding: 8px 15px; border-radius: 50px; border: 1px solid rgba(0,0,0,0.05);}
+        .contact-item i { color: var(--accent-orange); font-size: 22px; }
+
+        .calc-box { background-color: var(--card-bg); padding: 50px; border-radius: 24px; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.12); border-top: 6px solid var(--primary-blue); border: 1px solid var(--border-color); border-top-width: 6px; }
+        .back-btn { display: inline-flex; align-items: center; margin-bottom: 30px; color: var(--text-muted); text-decoration: none; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.3s; padding: 10px 20px; background: var(--input-bg); border-radius: 50px; border: 1px solid var(--border-color);}
+        .back-btn:hover { color: #FFF; background: var(--primary-light); transform: translateX(-5px); border-color: transparent;}
+        
+        .input-group, .row { margin-bottom: 30px; } .row { display: flex; gap: 30px; } .col { flex: 1; }
+        label { display: block; margin-bottom: 6px; font-size: 14.5px; color: var(--primary-blue); font-weight: 800; text-transform: uppercase; }
+        .label-desc { display: block; font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500; line-height: 1.5; }
+        
+        .alert-box { background-color: #FFF3E0; border: 1px solid #FFE0B2; border-left: 5px solid #FF9800; padding: 18px; border-radius: 8px; margin-bottom: 15px; font-size: 13.5px; line-height: 1.6; color: #E65100; font-weight: 500;}
+
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-prefix, .input-suffix { position: absolute; color: var(--primary-blue); font-weight: 800; font-size: 17px; }
+        .input-prefix { left: 20px; } .input-suffix { right: 20px; }
+        input, select { width: 100%; padding: 18px 20px; border: 2px solid var(--border-color); border-radius: 14px; background-color: var(--input-bg); color: var(--text-dark); font-size: 18px; font-weight: 700; font-family: 'Poppins', sans-serif; box-sizing: border-box; transition: 0.3s; }
+        input.with-prefix { padding-left: 55px; } input.with-suffix { padding-right: 55px; }
+        input:focus, select:focus { outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.2); }
+
+        button.action-btn { width: 100%; padding: 22px; background: linear-gradient(90deg, #F26E21, #FF8F00); color: #FFF; border: none; border-radius: 14px; font-size: 18px; font-weight: 800; cursor: pointer; transition: 0.3s; margin-top: 20px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 10px 20px rgba(242, 110, 33, 0.3);}
+        button.action-btn:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 15px 30px rgba(242, 110, 33, 0.6); }
+
+        .result-section { display: none; margin-top: 50px; border-top: 2px dashed var(--border-color); padding-top: 45px; }
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 35px; }
+        .result-card { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px 20px; text-align: center; transition: 0.3s; display: flex; flex-direction: column; justify-content: center;}
+        .result-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .result-card.primary { grid-column: span 2; background: linear-gradient(135deg, #003B73, #0056A8); color: #FFF; border: none; }
+        .result-value { font-size: 36px; font-weight: 800; margin: 10px 0; color: var(--primary-blue); }
+        .result-card.primary .result-value { color: #FFF; font-size: 46px; }
+        .result-label { font-size: 13.5px; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 5px; }
+        .def-text { font-size: 12px; color: #78909C; font-weight: 500; font-style: italic; line-height: 1.4; padding: 0 10px;}
+        body.dark-mode .def-text { color: #64748B; }
+
+        .insight-box { background-color: #FFF8E1; border-left: 6px solid #FFC107; padding: 30px; border-radius: 14px; margin-bottom: 30px; transition: 0.3s; }
+        .insight-title { font-weight: 800; color: #FF8F00; margin-bottom: 15px; display: block; font-size: 17px; border-bottom: 1px solid rgba(255, 152, 0, 0.2); padding-bottom: 10px; transition: 0.3s;}
+        .insight-text { font-size: 14.5px; line-height: 1.8; font-weight: 500; display: block; color: var(--text-dark); transition: 0.3s;}
+        
+        .insight-pensiun { background-color: #E1F5FE; border-left-color: #0288D1; }
+        .insight-pensiun .insight-title { color: #01579B; border-bottom-color: rgba(2, 136, 209, 0.2); }
+        
+        .insight-edukasi { background-color: #FAF5FF; border-left-color: #9333EA; }
+        .insight-edukasi .insight-title { color: #7E22CE; border-bottom-color: rgba(147, 51, 234, 0.2); }
+        
+        .insight-success { background-color: #E8F5E9; border-left-color: #22C55E; }
+        .insight-success .insight-title { color: #166534; border-bottom-color: rgba(34, 197, 94, 0.2); }
+        
+        .insight-danger { background-color: #FEF2F2; border-left-color: #EF4444; }
+        .insight-danger .insight-title { color: #B91C1C; border-bottom-color: rgba(239, 68, 68, 0.2); }
+
+        body.dark-mode .insight-box { background-color: rgba(30, 41, 59, 0.95); border-left-color: #F59E0B; }
+        body.dark-mode .insight-title { color: #FBBF24; border-bottom-color: #334155; }
+        body.dark-mode .insight-text { color: #F8FAFC; }
+        body.dark-mode .insight-pensiun { border-left-color: #38BDF8; }
+        body.dark-mode .insight-pensiun .insight-title { color: #7DD3FC; }
+        body.dark-mode .insight-edukasi { border-left-color: #A855F7; }
+        body.dark-mode .insight-edukasi .insight-title { color: #D8B4FE; }
+        body.dark-mode .insight-success { border-left-color: #4ADE80; }
+        body.dark-mode .insight-success .insight-title { color: #86EFAC; }
+        body.dark-mode .insight-danger { border-left-color: #F87171; }
+        body.dark-mode .insight-danger .insight-title { color: #FCA5A5; }
+
+        .faq-section { background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--border-color); border-radius: 16px; padding: 30px; margin-top: 40px; margin-bottom: 30px; page-break-inside: avoid; }
+        .faq-title { font-size: 18px; font-weight: 800; color: var(--primary-blue); margin-top: 0; margin-bottom: 25px; display: flex; align-items: center; gap: 8px; border-bottom: 2px dashed var(--border-color); padding-bottom: 15px;}
+        .faq-item { margin-bottom: 25px; }
+        .faq-item:last-child { margin-bottom: 0; }
+        .faq-item h4 { font-size: 15px; color: var(--accent-orange); margin: 0 0 8px 0; font-weight: 700; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
+        .faq-item p { font-size: 14px; color: var(--text-dark); margin: 0; line-height: 1.7; padding-left: 28px; font-weight: 500;}
+        body.dark-mode .faq-item p { color: #E2E8F0; }
+
+        .math-box { background-color: #0F172A; color: #E2E8F0; padding: 30px; border-radius: 16px; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.8; border-left: 6px solid #38BDF8; page-break-inside: avoid; }
+        .math-title { color: #38BDF8; font-weight: 800; margin-bottom: 18px; display: block; border-bottom: 1px dashed #334155; padding-bottom: 12px; font-family: 'Poppins', sans-serif;}
+        
+        .chart-container { background: var(--input-bg); padding: 20px; border-radius: 16px; margin-bottom: 30px; border: 1px solid var(--border-color); }
+
+        .print-mode { background: #FFFFFF !important; color: #000 !important; }
+        .print-mode * { color: #000; }
+        .print-mode .bg-dream-scene, .print-mode .falling-leaf-global { display: none !important; }
+        .print-mode .menu-card, .print-mode .calc-box, .print-mode .faq-section { backdrop-filter: none !important; background: #FFFFFF !important; box-shadow: none !important; border: 1px solid #000 !important; }
+        .print-mode .dashboard-header, .print-mode .contact-footer { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin-bottom: 40px !important;}
+        .print-mode .contact-item { border: none !important; background: transparent !important;}
+        .print-mode .math-box { background: #F8FAFC !important; color: #000 !important; border-left-color: #000 !important; }
+
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; gap: 15px; text-align: center; padding: 20px; }
+            .dashboard-header { padding: 25px 15px; margin-bottom: 30px; }
+            .dashboard-header h2 { font-size: 32px; }
+            .dashboard-header p { font-size: 15px; }
+            .calc-box { padding: 30px 20px; }
+            .row { flex-direction: column; gap: 15px; margin-bottom: 15px; }
+            .input-group { margin-bottom: 15px; }
+            .result-grid { grid-template-columns: 1fr; gap: 20px; }
+            .result-card.primary { grid-column: span 1; }
+            .result-value { font-size: 28px; }
+            .result-card.primary .result-value { font-size: 36px; }
+            .contact-details { flex-direction: column; align-items: stretch; }
+            .contact-item { justify-content: center; }
+            .faq-section { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-dream-scene"></div>
+
+<nav class="navbar">
+    <h1 onclick="showSection('home')">Smart<span>Planner</span></h1>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button class="nav-btn" onclick="toggleDarkMode()"><i class="ph ph-moon"></i> Mode Malam</button>
+        <button class="nav-btn btn-pdf" onclick="cetakLaporanPDF()"><i class="ph ph-printer"></i> Cetak Laporan PDF</button>
+    </div>
+</nav>
+
+<div class="container" id="area-laporan">
+    
+    <div id="section-home" class="app-section active">
+        <div class="dashboard-header">
+            <h2>Kendalikan Masa Depanmu</h2>
+            <p>Instrumen kalkulasi finansial presisi berbasis logika matematika untuk melawan inflasi.</p>
+        </div>
+        
+        <div class="menu-grid">
+            <div class="menu-card" onclick="showSection('calc-darurat')">
+                <div class="menu-content-wrapper"><div class="menu-icon"><i class="ph ph-shield-check"></i></div><div class="menu-title">Dana Darurat</div></div>
+                <div class="menu-desc">Hitung fondasi jaring pengaman tunai Anda. Dilengkapi simulasi target bulan.</div>
+            </div>
+            
+            <div class="menu-card" onclick="showSection('calc-pensiun')">
+                <div class="menu-content-wrapper"><div class="menu-icon"><i class="ph ph-trend-up"></i></div><div class="menu-title">Bebas Finansial</div></div>
+                <div class="menu-desc">Proyeksi pensiun aman. Memecah Logaritma Natural dan persamaan Real Return.</div>
+            </div>
+
+            <div class="menu-card" onclick="showSection('calc-properti')">
+                <div class="menu-content-wrapper"><div class="menu-icon"><i class="ph ph-buildings"></i></div><div class="menu-title">ROI Properti & Sewa</div></div>
+                <div class="menu-desc">Analisis cerdas membedah arus kas bisnis fisik agar tidak merugi secara waktu.</div>
+            </div>
+            
+            <div class="menu-card" onclick="showSection('calc-edukasi')" style="border-color: var(--accent-orange);">
+                <div class="badge-locked" style="background: var(--accent-orange); right:-45px;">UNLOCKED</div>
+                <div class="menu-content-wrapper"><div class="menu-icon"><i class="ph ph-graduation-cap"></i></div><div class="menu-title">Dana Edukasi</div></div>
+                <div class="menu-desc">Tundukkan inflasi biaya kuliah Kedokteran/Sains dengan perhitungan Reverse Annuity.</div>
+            </div>
+        </div>
+
+        <div class="faq-section">
+            <h3 class="faq-title"><i class="ph ph-books"></i> Buku Saku Beranda (Informasi Dasar)</h3>
+            <div class="faq-item">
+                <h4><i class="ph ph-info"></i> Apa perbedaan dari keempat kalkulator di aplikasi ini?</h4>
+                <p>Setiap kalkulator memiliki fungsi spesifik. <b>Dana Darurat</b> untuk menghitung jaring pengaman saat krisis tak terduga. <b>Bebas Finansial</b> memproyeksikan target pensiun menggunakan efek bola salju (*Compound Interest*). <b>ROI Properti</b> membedah keuntungan bisnis fisik melawan bunga investasi pasif. Serta <b>Dana Edukasi</b> untuk menargetkan setoran wajib demi melawan inflasi perguruan tinggi.</p>
+            </div>
+            <div class="faq-item">
+                <h4><i class="ph ph-info"></i> Mengapa perhitungan di sini disebut "berbasis logika matematika"?</h4>
+                <p>Karena aplikasi ini menolak tebakan kasar. Sistem memproses keuangan Anda menggunakan rumus rasional seperti Logaritma Natural ($ln$) untuk memproyeksikan waktu tempuh, <i>Fisher Equation</i> untuk mengupas nilai inflasi, dan <i>Reverse Annuity</i> untuk membalikkan target di masa depan menjadi setoran wajib hari ini.</p>
+            </div>
+            <div class="faq-item">
+                <h4><i class="ph ph-info"></i> Apa itu "Opportunity Cost" yang sering dibahas di aplikasi ini?</h4>
+                <p><i>Opportunity Cost</i> (Biaya Peluang) adalah keuntungan pasif yang Anda korbankan ketika mengambil sebuah keputusan finansial. Contoh: Jika uang miliaran Anda belikan tanah kosong tanpa hasil, *Opportunity Cost* Anda adalah uang ratusan juta dari bunga Deposito/SBN yang seharusnya bisa Anda terima tanpa perlu bekerja.</p>
+            </div>
+            <div class="faq-item">
+                <h4><i class="ph ph-info"></i> Apakah data nominal uang yang saya masukkan di sini aman?</h4>
+                <p>Sangat aman. Aplikasi ini beroperasi 100% di sisi klien (<i>client-side</i>). Seluruh data dan angka yang Anda ketik diproses sementara di memori perangkat (browser) Anda saat itu juga, dan tidak pernah dikirim atau disimpan di server/database manapun.</p>
+            </div>
+        </div>
+
+        <div class="contact-footer">
+            <h3><i class="ph ph-headset" style="vertical-align: middle; margin-right: 5px;"></i> Hubungi Konsultan Perencana</h3>
+            <div class="contact-details">
+                <div class="contact-item"><i class="ph ph-map-pin"></i> Jalan Raya Tiyingtutul No.28, Pererenan</div>
+                <div class="contact-item"><i class="ph ph-envelope-simple"></i> aangrgedeindraprasta@gmail.com</div>
+                <div class="contact-item"><i class="ph ph-whatsapp-logo"></i> 087846326588</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-calc-darurat" class="app-section">
+        <div class="back-btn" onclick="showSection('home')"><i class="ph ph-arrow-left" style="margin-right: 5px;"></i> Kembali ke Dashboard</div>
+        <div class="calc-box">
+            <h2 style="color:var(--primary-blue); margin-top:0; font-weight:800; font-size:30px;">Kalkulator Dana Darurat</h2>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Pengeluaran Pokok / Bln</label>
+                    <span class="label-desc">Biaya hidup wajib tiap bulan (contoh: makan, tagihan listrik, bensin, cicilan). Jangan masukkan uang untuk nongkrong/gaya hidup.</span>
+                    <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="pengeluaranDarurat" class="with-prefix" placeholder="5.000.000" onkeyup="formatRupiah(this)"></div>
+                </div>
+                <div class="col">
+                    <label>Status Risiko (Tanggungan)</label>
+                    <span class="label-desc">Semakin banyak orang yang bergantung pada Anda, semakin besar target dana yang harus disiapkan.</span>
+                    <select id="statusDarurat"><option value="6">Lajang (Persiapan 6 Bulan)</option><option value="9">Menikah (Persiapan 9 Bulan)</option><option value="12">Menikah Punya Anak (Persiapan 12 Bulan)</option></select>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>Modal Awal Saat Ini</label>
+                <span class="label-desc">Uang tunai atau saldo tabungan nganggur yang sudah kamu miliki saat ini.</span>
+                <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="modalDarurat" class="with-prefix" placeholder="5.000.000" onkeyup="formatRupiah(this)"></div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Setoran / Bln</label>
+                    <span class="label-desc">Komitmen uang yang pasti Anda sisihkan dari gaji untuk tabungan darurat ini.</span>
+                    <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="setoranDarurat" class="with-prefix" placeholder="1.000.000" onkeyup="formatRupiah(this)"></div>
+                </div>
+                <div class="col">
+                    <label>Bunga Tempat Menyimpan / Thn (APY)</label>
+                    <span class="label-desc">Tabungan bank biasa umumnya hanya memberi bunga 0.5% - 1% setahun. Reksadana Pasar Uang sekitar 4% - 6% setahun.</span>
+                    <div class="input-wrapper"><input type="number" id="instrumenDarurat" class="with-suffix" placeholder="4.5" step="0.1"><span class="input-suffix">%</span></div>
+                </div>
+            </div>
+            
+            <button class="action-btn" onclick="hitungDarurat()">ANALISIS JARING PENGAMAN</button>
+            
+            <div class="result-section" id="resSectionDarurat">
+                <div class="result-grid">
+                    <div class="result-card primary">
+                        <div class="result-label">Target Dana Darurat</div>
+                        <div class="def-text">(Total jaring pengaman tunai yang harus dicapai)</div>
+                        <div class="result-value" id="resTargetDarurat">Rp 0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Waktu Pencapaian</div>
+                        <div class="def-text">(Lama waktu yang dibutuhkan untuk mencapai target di atas)</div>
+                        <div class="result-value" id="resWaktuDarurat">0 Bulan</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Cuan Tambahan (Bunga)</div>
+                        <div class="def-text">(Uang ekstra gratis yang didapat dari bunga bank/investasi selama Anda menabung)</div>
+                        <div class="result-value" id="resBungaDarurat">Rp 0</div>
+                    </div>
+                </div>
+                <div class="chart-container"><canvas id="chartDarurat"></canvas></div>
+                
+                <div class="insight-box" id="insightBoxDarurat">
+                    <span class="insight-title"><i class="ph ph-shield-check"></i> DIAGNOSA PERTAHANAN KEUANGAN:</span>
+                    <span class="insight-text" id="insightDarurat">...</span>
+                </div>
+                
+                <div class="faq-section">
+                    <h3 class="faq-title"><i class="ph ph-question"></i> Buku Saku (Pertanyaan Umum)</h3>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Mengapa saya harus "BERHENTI" menabung setelah target tercapai?</h4>
+                        <p>Karena uang dana darurat biasanya disimpan di tempat yang mudah dicairkan (seperti tabungan biasa), yang mana bunganya sangat kecil. Menyimpan uang terlalu banyak di tempat berbunga kecil akan membuat nilai uang Anda "dimakan" oleh kenaikan harga barang (inflasi). Lebih baik sisa uang bulanan Anda dipindahkan ke investasi yang untungnya besar (Saham/Properti).</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Apakah aman menyimpan Dana Darurat di Reksadana Pasar Uang?</h4>
+                        <p>Sangat aman. Reksadana Pasar Uang (RDPU) diatur oleh OJK dan isinya adalah deposito bank serta surat utang negara jatuh tempo pendek. Keuntungannya lebih besar dari tabungan biasa, tidak kena biaya admin bulanan, dan bisa dicairkan dalam waktu 1-2 hari kerja.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Bagaimana jika saya terpaksa mengambil dana ini sebelum target tercapai?</h4>
+                        <p>Tidak masalah, itulah fungsi utama dana darurat! Jika terpakai, segera ubah prioritas keuangan Anda di bulan berikutnya untuk mengisi kembali (*top-up*) dana yang terpakai tersebut hingga kembali menyentuh batas target aman.</p>
+                    </div>
+                </div>
+
+                <div class="math-box">
+                    <span class="math-title"><i class="ph ph-function"></i> Bedah Rumus Logaritma Waktu (Lengkap)</span>
+                    <div id="mathTextDarurat">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-calc-pensiun" class="app-section">
+        <div class="back-btn" onclick="showSection('home')"><i class="ph ph-arrow-left" style="margin-right: 5px;"></i> Kembali ke Dashboard</div>
+        <div class="calc-box">
+            <h2 style="color:var(--primary-blue); margin-top:0; font-weight:800; font-size:30px;">Kalkulator Bebas Finansial (Pensiun)</h2>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Usia Saat Ini</label>
+                    <span class="label-desc">Umur Anda saat akan memulai investasi serius hari ini.</span>
+                    <input type="number" id="usia" placeholder="25">
+                </div>
+                <div class="col">
+                    <label>Pengeluaran Impian / Bln</label>
+                    <span class="label-desc">Gaya hidup (biaya hidup) yang Anda inginkan saat pensiun dan sudah tidak bekerja lagi.</span>
+                    <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="pengeluaran" class="with-prefix" placeholder="10.000.000" onkeyup="formatRupiah(this)"></div>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>Modal Investasi Awal</label>
+                <span class="label-desc">Uang dingin yang siap Anda langsung belikan instrumen investasi (saham, obligasi, dll) hari ini.</span>
+                <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="modal" class="with-prefix" placeholder="50.000.000" onkeyup="formatRupiah(this)"></div>
+            </div>
+            
+            <div class="input-group">
+                <label>Setoran Investasi / Bln</label>
+                <span class="label-desc">Uang yang akan rutin Anda tabung ke dalam portofolio investasi setiap bulannya tanpa terputus.</span>
+                <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="nabung" class="with-prefix" placeholder="3.000.000" onkeyup="formatRupiah(this)"></div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Asumsi Inflasi / Thn</label>
+                    <span class="label-desc">Laju kenaikan harga barang yang membuat uang Anda melemah (Data historis Indonesia sekitar 4% - 6%).</span>
+                    <div class="input-wrapper"><input type="number" id="inflasi" class="with-suffix" placeholder="5" step="0.5"><span class="input-suffix">%</span></div>
+                </div>
+                <div class="col">
+                    <label>Bunga Investasi / Thn</label>
+                    <span class="label-desc">Keuntungan dari investasi yang Anda pilih (Misal Saham/Reksadana Saham biasanya 10% - 15%).</span>
+                    <div class="input-wrapper"><input type="number" id="returnInv" class="with-suffix" placeholder="12" step="0.5"><span class="input-suffix">%</span></div>
+                </div>
+            </div>
+            
+            <button class="action-btn" onclick="hitungPensiun()">PROYEKSI MASA PENSIUN</button>
+            
+            <div class="result-section" id="resSectionPensiun">
+                <div class="result-grid">
+                    <div class="result-card primary">
+                        <div class="result-label">Target Nilai Aset Pensiun</div>
+                        <div class="def-text">(Berdasarkan Aturan 300: Total uang yang harus terkumpul agar hasil bunganya bisa membiayai pengeluaran impian Anda selamanya)</div>
+                        <div class="result-value" id="resTarget">Rp 0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Lama Menabung</div>
+                        <div class="def-text">(Waktu tempuh untuk mencapai target di atas)</div>
+                        <div class="result-value" id="resWaktu">0 Tahun</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Anda Akan Pensiun di Usia</div>
+                        <div class="def-text">(Umur estimasi Anda meraih status Merdeka Finansial)</div>
+                        <div class="result-value" id="resUsia">0</div>
+                    </div>
+                </div>
+                <div class="chart-container"><canvas id="chartPensiun"></canvas></div>
+                
+                <div class="insight-box insight-pensiun" id="insightBoxPensiun">
+                    <span class="insight-title"><i class="ph ph-lightbulb"></i> DIAGNOSA REAL RETURN (KEUNTUNGAN NYATA):</span>
+                    <span class="insight-text" id="insightPensiun">...</span>
+                </div>
+
+                <div class="faq-section">
+                    <h3 class="faq-title"><i class="ph ph-question"></i> Buku Saku (Pertanyaan Umum)</h3>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Kok target pensiunnya bisa miliaran? Pakai aturan apa ini?</h4>
+                        <p>Sistem ini menggunakan <b>The 300 Rule</b> (Aturan 300) yang merupakan standar ahli perencanaan keuangan dunia (setara dengan 4% Withdrawal Rate). Caranya: Pengeluaran Impian per bulan dikali 300. Jika uang miliaran ini terkumpul dan diinvestasikan dengan bunga minimal 4% setahun, maka hasil bunganya saja sudah cukup untuk membiayai hidup Anda selamanya, <b>tanpa mengurangi pokok uangnya sedikitpun!</b></p>
+                    </div>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Kenapa grafik Inflasi (garis merah) terus naik memakan uang saya?</h4>
+                        <p>Itulah sifat asli uang kertas (fiat). Harga barang akan selalu naik. Jika Anda berinvestasi dan mendapat bunga 10%, tapi harga barang (inflasi) juga naik 5%, maka keuntungan finansial "asli" Anda sebenarnya cuma 5%. Sistem grafik di atas secara transparan menunjukkan seberapa besar nilai kekayaan Anda dihancurkan oleh inflasi dari tahun ke tahun.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Apakah mungkin saya pensiun di usia muda dengan gaji pas-pasan?</h4>
+                        <p>Secara matematika: BISA. Kunci utama pensiun dini bukan seberapa besar gaji Anda, tapi seberapa disiplin Anda melakukan "Compound Interest" (Bunga Berbunga). Uang Rp 1 Juta yang diinvestasikan secara konsisten di usia 20 tahun akan jauh lebih bernilai miliaran dibandingkan uang Rp 10 Juta yang baru mulai diinvestasikan di usia 40 tahun.</p>
+                    </div>
+                </div>
+
+                <div class="math-box">
+                    <span class="math-title"><i class="ph ph-function"></i> Bedah Rumus Kompleks (Fisher Equation & Log) Lengkap</span>
+                    <div id="mathTextPensiun">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-calc-properti" class="app-section">
+        <div class="back-btn" onclick="showSection('home')"><i class="ph ph-arrow-left" style="margin-right: 5px;"></i> Kembali ke Dashboard</div>
+        <div class="calc-box">
+            <h2 style="color:var(--primary-blue); margin-top:0; font-weight:800; font-size:30px;">Kalkulator Kelayakan Bisnis & Properti</h2>
+            
+            <div class="input-group">
+                <label>Total Uang Keluar (Beli Tanah/Bangun Bisnis)</label>
+                <span class="label-desc">Berapa total uang (modal) yang Anda habiskan dari awal untuk membeli tanah, membangun kos-kosan, tempat cuci mobil, atau bisnis fisik lainnya?</span>
+                <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="modalProperti" class="with-prefix" placeholder="Contoh: 2.000.000.000 (2 Miliar)" onkeyup="formatRupiah(this)"></div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <label>Penghasilan Kotor / Bln</label>
+                    <span class="label-desc">Total semua uang yang Anda terima dari orang yang menyewa/membayar setiap bulannya (Omset kotor).</span>
+                    <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="pemasukanProperti" class="with-prefix" placeholder="15.000.000" onkeyup="formatRupiah(this)"></div>
+                </div>
+                <div class="col">
+                    <label>Biaya Operasional / Bln</label>
+                    <span class="label-desc">Uang yang harus Anda keluarkan tiap bulan untuk gaji penjaga, bayar listrik, air, tagihan sampah, hingga perawatan genteng bocor.</span>
+                    <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="pengeluaranProperti" class="with-prefix" placeholder="3.000.000" onkeyup="formatRupiah(this)"></div>
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-top: 40px;">
+                <label>PEMBANDING: Bunga Instrumen Investasi Pasif / Tahun</label>
+                <div class="alert-box">
+                    <b><i class="ph ph-info"></i> INI ADALAH "SAINGAN" DARI BISNISMU (OPPORTUNITY COST).</b><br>
+                    Coba bayangkan: Uang miliaran Anda tadi <b>TIDAK</b> dipakai untuk membangun properti, melainkan dialokasikan pada instrumen pasif (seperti Deposito, SBN, Obligasi, atau Reksadana) yang tidak membutuhkan operasional harian.<br><br>
+                    Masukkan persentase bunga tahunan dari investasi pasif tersebut di bawah ini. Tujuannya untuk menguji: <i>Apakah keringat dan waktu Anda mengurus bisnis fisik menghasilkan keuntungan yang <b>LEBIH BESAR</b> daripada sekadar membiarkan modal tersebut bekerja sendiri di pasar modal?</i>
+                </div>
+                <div class="input-wrapper"><input type="number" id="oppCostRate" class="with-suffix" placeholder="6.5" step="0.1"><span class="input-suffix">%</span></div>
+            </div>
+
+            <button class="action-btn" onclick="hitungProperti()">X-RAY KELAYAKAN BISNIS</button>
+
+            <div class="result-section" id="resSectionProperti">
+                <div class="result-grid">
+                    <div class="result-card primary" id="propertiStatusCard">
+                        <div class="result-label" style="color:#FFF;">Status Efisiensi Modal</div>
+                        <div class="result-value" id="resStatusProperti" style="font-size: 32px;">MENUNGGU...</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label" style="color: #166534;">Keuntungan Bersih (NOI)</div>
+                        <div class="def-text">(Total uang bersih yang masuk kantong Anda selama setahun penuh setelah dipotong semua biaya operasional)</div>
+                        <div class="result-value" style="color: #166534; font-size: 28px;" id="resNOI">Rp 0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label" style="color: var(--accent-orange);">Persentase Hasil (Cap Rate)</div>
+                        <div class="def-text">(Rasio keuntungan properti Anda. Jika angka ini <b>LEBIH BESAR</b> dari bunga Bank pembanding tadi, berarti bisnis Anda terbukti menguntungkan.)</div>
+                        <div class="result-value" style="color: var(--accent-orange);" id="resCapRate">0%</div>
+                    </div>
+                </div>
+                <div class="insight-box" id="insightBoxProperti"><span class="insight-title"><i class="ph ph-magnifying-glass"></i> REKOMENDASI KONSULTAN:</span><span class="insight-text" id="insightProperti">...</span></div>
+                
+                <div class="faq-section">
+                    <h3 class="faq-title"><i class="ph ph-question"></i> Buku Saku (Pertanyaan Umum)</h3>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Kenapa sistem bilang properti saya "Merugi/Tidak Efisien" padahal tiap bulan saya dapat uang tunai?</h4>
+                        <p>Ini adalah jebakan finansial yang sering menjerat pengusaha awam. Anda mungkin tidak rugi uang secara fisik, namun Anda mengalami <b>Kerugian Waktu dan Peluang Keuntungan (Opportunity Cost)</b>. Jika properti Anda hanya menghasilkan untung bersih 4% setahun padahal Anda harus pusing mengurus penyewa, sedangkan di luar sana ada Surat Utang Negara (SBN) yang memberikan untung 6% setahun (di mana Anda terbebas dari beban operasional dan uang dijamin negara), maka secara rasionalitas matematika, Anda sedang "bekerja bakti" tanpa dibayar sepadan.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Apa itu NOI (Net Operating Income) dan kenapa sangat penting?</h4>
+                        <p>NOI adalah "Denyut Nadi" sesungguhnya dari sebuah properti. Banyak orang tertipu oleh omset kotor (Pemasukan). NOI memangkas ilusi omset tersebut dengan cara menguranginya menggunakan semua biaya perawatan, gaji, dan pajak selama setahun. Properti dengan omset tinggi tapi biaya operasionalnya boros akan memiliki NOI yang hancur.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4><i class="ph ph-chat-circle-text"></i> Jika status bisnis saya "Merugi", apa solusi tercepat yang harus saya lakukan?</h4>
+                        <p>Hanya ada 3 cara matematis untuk mengubah status tersebut menjadi untung: (1) Naikkan harga sewa/tarif pelanggan secara signifikan. (2) Pangkas pengeluaran operasional bulanan seminimal mungkin. (3) <i>Cut Loss</i>. Jual properti tersebut dan pindahkan uang miliaran tersebut ke instrumen investasi murni seperti Obligasi atau Saham Bluechip.</p>
+                    </div>
+                </div>
+
+                <div class="math-box">
+                    <span class="math-title"><i class="ph ph-function"></i> Bedah Rumus Institusi Properti (Lengkap)</span>
+                    <div id="mathTextProperti">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-calc-edukasi" class="app-section">
+        <div class="back-btn" onclick="showSection('home')"><i class="ph ph-arrow-left" style="margin-right: 5px;"></i> Kembali ke Dashboard</div>
+        <div class="calc-box">
+            <h2 style="color:var(--primary-blue); margin-top:0; font-weight:800; font-size:30px;">Kalkulator Kewajiban Dana Kuliah</h2>
+            <p class="desc" style="margin-bottom:30px;">Menghitung berapa rupiah yang wajib disetor orang tua setiap bulannya sebelum harga kuliah Kedokteran/Sains meledak di masa depan.</p>
+            
+            <div class="input-group">
+                <label>Estimasi Biaya Kuliah SAAT INI (Tahun Ini)</label>
+                <span class="label-desc">Hitung dan masukkan total <b>keseluruhan</b> biayanya: Uang Pangkal/Gedung + (Uang Semesteran/UKT x 8 Semester) + Biaya Buku & Praktikum Kedokteran. Anggap anak Anda masuk kuliah di tahun ini.</span>
+                <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="biayaEdukasi" class="with-prefix" placeholder="300.000.000" onkeyup="formatRupiah(this)"></div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <label>Sisa Waktu Menabung (Tahun)</label>
+                    <span class="label-desc">Berapa tahun lagi jarak anak Anda hingga ia secara resmi mendaftar di universitas?</span>
+                    <input type="number" id="waktuEdukasi" placeholder="Misal: 3">
+                </div>
+                <div class="col">
+                    <label>Inflasi (Kenaikan Harga) Pendidikan / Thn</label>
+                    <span class="label-desc">Biaya perguruan tinggi naik lebih agresif (ganas) dari sembako. Rata-rata di Indonesia mencapai 10% hingga 15% setiap tahunnya.</span>
+                    <div class="input-wrapper"><input type="number" id="inflasiEdukasi" class="with-suffix" placeholder="10" step="0.5"><span class="input-suffix">%</span></div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Tabungan Kuliah yang Sudah Ada</label>
+                    <span class="label-desc">Jika orang tua sudah punya tabungan awal yang khusus disiapkan untuk anak, masukkan di sini. Jika belum ada, isi angka 0.</span>
+                    <div class="input-wrapper"><span class="input-prefix">Rp</span><input type="text" id="modalEdukasi" class="with-prefix" placeholder="50.000.000" onkeyup="formatRupiah(this)"></div>
+                </div>
+                <div class="col">
+                    <label>Bunga dari Investasi/Tabungan / Thn</label>
+                    <span class="label-desc">Jika uang tabungan tadi ditaruh di Reksadana/Saham, berapa persen untung tahunan yang diberikan oleh tempat tersebut?</span>
+                    <div class="input-wrapper"><input type="number" id="returnEdukasi" class="with-suffix" placeholder="8" step="0.5"><span class="input-suffix">%</span></div>
+                </div>
+            </div>
+            
+            <button class="action-btn" onclick="hitungEdukasi()">TEMUKAN TARGET & SETORAN WAJIB</button>
+            
+            <div class="result-section" id="resSectionEdukasi">
+                <div class="result-grid">
+                    <div class="result-card primary" style="background: linear-gradient(135deg, #7E22CE, #A855F7);">
+                        <div class="result-label" style="color:#F3E8FF;">Prediksi Biaya Kuliah Masa Depan</div>
+                        <div class="def-text" style="color:#D8B4FE;">(Total uang yang harus dibayarkan ke kampus nanti akibat harganya yang telah naik/membengkak oleh inflasi)</div>
+                        <div class="result-value" id="resTargetEdukasi">Rp 0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Setoran Wajib / Bulan</div>
+                        <div class="def-text">(Jumlah nominal pasti yang <b>HARUS</b> orang tua tabung tiap bulan mulai hari ini untuk mengejar target biaya kampus di atas)</div>
+                        <div class="result-value" style="color: #7E22CE; font-size: 28px;" id="resSetoranEdukasi">Rp 0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Uang Asli yang Keluar (Uang Murni)</div>
+                        <div class="def-text">(Ini adalah total uang asli yang benar-benar keluar dari dompet Anda. Sisanya untuk membayar kampus akan dibayarkan secara gratis oleh bunga investasi)</div>
+                        <div class="result-value" style="color: var(--accent-orange); font-size: 28px;" id="resMurniEdukasi">Rp 0</div>
+                    </div>
+                </div>
+                <div class="chart-container"><canvas id="chartEdukasi"></canvas></div>
+                
+                <div class="insight-box insight-edukasi" id="insightBoxEdukasi">
+                    <span class="insight-title"><i class="ph ph-graduation-cap"></i> DIAGNOSA PENDIDIKAN TINGGI:</span>
+                    <span class="insight-text" id="insightEdukasi">...</span>
+                </div>
+
+                <div class="faq-section">
+                    <h3 class="faq-title" style="color: #7E22CE; border-bottom-color: #E9D5FF;"><i class="ph ph-question"></i> Buku Saku (Pertanyaan Umum)</h3>
+                    <div class="faq-item">
+                        <h4 style="color: #9333EA;"><i class="ph ph-chat-circle-text"></i> Mengapa Prediksi Biaya Kuliah membengkak sangat jauh dari harga aslinya?</h4>
+                        <p>Kenaikan harga (inflasi) di sektor pendidikan tinggi, khususnya rumpun ilmu berat seperti Kedokteran dan Sains, terjadi secara mutan dan jauh melampaui inflasi harga bahan pokok (biasanya di angka 10-15% per tahun). Nilai uang Rp 300 Juta hari ini, dijamin <b>TIDAK AKAN CUKUP</b> untuk mendaftar kuliah di kampus yang sama pada 3 atau 5 tahun ke depan.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4 style="color: #9333EA;"><i class="ph ph-chat-circle-text"></i> Apa untungnya melihat kolom "Uang Asli yang Keluar (Uang Murni)"?</h4>
+                        <p>Kolom tersebut membuktikan kehebatan Matematika Finansial kepada orang tua. Daripada menabung di bawah kasur dan harus mengeluarkan uang ratusan juta secara Utuh 100%, dengan berinvestasi rutin tiap bulan orang tua dibantu oleh keajaiban Bunga Majemuk (*Compound Interest*). Selisih antara "Prediksi Biaya Kampus" dengan "Uang Asli yang Keluar" adalah porsi uang yang dibayarkan oleh mesin investasi Anda secara <b>CUMA-CUMA!</b></p>
+                    </div>
+                    <div class="faq-item">
+                        <h4 style="color: #9333EA;"><i class="ph ph-chat-circle-text"></i> Instrumen investasi apa yang paling cocok untuk Dana Pendidikan?</h4>
+                        <p>Karena dana pendidikan memiliki target waktu yang mutlak dan pasti (anak pasti lulus SMA di tahun tersebut), maka hindari instrumen risiko tinggi dengan pergerakan tajam seperti Saham atau Kripto jika waktunya tinggal 1-3 tahun lagi. Pilihlah Reksadana Pendapatan Tetap atau Surat Berharga Negara (SBN) untuk mengamankan nilai pencairan sebelum masa pendaftaran kampus tiba.</p>
+                    </div>
+                </div>
+
+                <div class="math-box">
+                    <span class="math-title" style="color:#A855F7; border-bottom-color:#334155;"><i class="ph ph-function"></i> Bedah Rumus Anuitas Terbalik (Lengkap)</span>
+                    <div id="mathTextEdukasi">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function animateValue(id, start, end, duration, prefix = "", suffix = "") {
+        let obj = document.getElementById(id); let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp; const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            let currentVal = Math.floor(progress * (end - start) + start);
+            obj.innerText = prefix + currentVal.toLocaleString('id-ID') + suffix;
+            if (progress < 1) { window.requestAnimationFrame(step); }
+        };
+        window.requestAnimationFrame(step);
+    }
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+    function showSection(sectionId) { document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active')); document.getElementById('section-' + sectionId).classList.add('active'); setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50); }
+    function formatRupiah(input) { let angka = input.value.replace(/[^,\d]/g, '').toString(); let split = angka.split(','); let sisa = split[0].length % 3; let rupiah = split[0].substr(0, sisa); let ribuan = split[0].substr(sisa).match(/\d{3}/gi); if (ribuan) { rupiah += (sisa ? '.' : '') + ribuan.join('.'); } input.value = rupiah; }
+    function parseRupiah(str) { return parseFloat((str||'').replace(/\./g, '')) || 0; }
+    let daruratChartInstance = null; let pensiunChartInstance = null; let edukasiChartInstance = null;
+    
+    function cetakLaporanPDF() {
+        const element = document.getElementById('area-laporan'); element.classList.add('print-mode');
+        Swal.fire({ title: 'Menyiapkan PDF...', text: 'Mengoptimasi resolusi dokumen ke tingkat HD.', icon: 'info', timer: 2000, showConfirmButton: false });
+        setTimeout(() => { const opt = { margin: 10, filename: 'Laporan_Finansial_SmartPlanner.pdf', image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }; html2pdf().set(opt).from(element).save().then(() => { element.classList.remove('print-mode'); Swal.fire('Berhasil!', 'PDF Laporan telah diunduh.', 'success'); }); }, 2000);
+    }
+    
+    // --- PATCH V15.0: FULL ACADEMIC MATH BREAKDOWN (DIKETAHUI, DITANYA, DIJAWAB) ---
+    function hitungDarurat() {
+        let p = parseRupiah(document.getElementById('pengeluaranDarurat').value), m = parseRupiah(document.getElementById('modalDarurat').value), s = parseRupiah(document.getElementById('setoranDarurat').value), rate = parseFloat(document.getElementById('instrumenDarurat').value)/100;
+        let p_status = parseInt(document.getElementById('statusDarurat').value);
+        let fv = p * p_status;
+        
+        if(!p || !s || isNaN(rate)) { Swal.fire({icon: 'error', title: 'Data Kosong!', text: 'Harap masukkan semua angka dengan benar.'}); return; }
+        if(m >= fv) { Swal.fire({icon: 'success', title: 'Target Tercapai!', text: 'Dana Darurat terpenuhi! Anda diwajibkan mengalihkan modal menabung Anda ke investasi lanjutan.'}); return; }
+        
+        let r_bln = rate/12, n = rate === 0 ? (fv-m)/s : Math.log((fv*r_bln + s)/(m*r_bln + s))/Math.log(1+r_bln);
+        let bunga = Math.max(0, fv - (m+(s*n)));
+        
+        animateValue("resTargetDarurat", 0, fv, 1500, "Rp "); animateValue("resWaktuDarurat", 0, Math.ceil(n), 1500, "", " Bulan"); animateValue("resBungaDarurat", 0, bunga, 1500, "+ Rp ");
+        
+        document.getElementById('insightBoxDarurat').className = "insight-box insight-success";
+        document.getElementById('insightDarurat').innerHTML=`
+            <b>Status: Jaring Pengaman Terproyeksi!</b> Target dana darurat Anda akan tercapai secara sistematis dalam kurun waktu ${Math.ceil(n)} bulan.<br><br>
+            <b>Kesimpulan & Arahan Strategis:</b><br>
+            Berdasarkan simulasi grafik, Anda dilarang keras menghentikan setoran hingga garis kurva mencapai target. Namun, ketika angka <b>Rp ${fv.toLocaleString('id-ID')}</b> ini sudah genap tercapai di rekening, Anda <b>DIWAJIBKAN BERHENTI</b> menyuntikkan dana ke rekening ini.<br>
+            Menyimpan uang melebihi batas target di tabungan biasa sama dengan membiarkan sisa modal Anda hancur dimakan oleh inflasi secara pasif. Pindahkan sisa energi menabung Anda untuk membangun portofolio investasi atau bisnis.`;
+        
+        // FORMAT MATEMATIKA SEKOLAH
+        let r_cetak = (rate * 100).toFixed(2);
+        let r_bln_cetak = (r_bln * 100).toFixed(2);
+        let mathHtml = `
+            <b>Diketahui:</b><br>
+            - Pengeluaran (P) = Rp ${p.toLocaleString('id-ID')} / bulan<br>
+            - Target Aman (FV) = ${p_status} x P = Rp ${fv.toLocaleString('id-ID')}<br>
+            - Modal Awal (PV) = Rp ${m.toLocaleString('id-ID')}<br>
+            - Setoran (PMT) = Rp ${s.toLocaleString('id-ID')} / bulan<br>
+            - Bunga (r) = ${r_cetak}% / tahun &nbsp;&rarr;&nbsp; Bunga Bulanan = ${r_bln_cetak}%<br><br>
+            <b>Ditanya:</b><br>
+            - Waktu Tempuh (n) = ?<br><br>
+            <b>Dijawab:</b><br>
+        `;
+        
+        if (rate === 0) {
+            mathHtml += `
+                Rumus Linear (Tanpa Bunga):<br>
+                n = (FV - PV) / PMT<br>
+                n = (${fv} - ${m}) / ${s}<br>
+                <b>n = ${n.toFixed(2)} Bulan</b> (Dibulatkan: ${Math.ceil(n)} Bulan)
+            `;
+        } else {
+            mathHtml += `
+                Rumus Logaritma Anuitas:<br>
+                n = [ ln(FV &times; r + PMT) - ln(PV &times; r + PMT) ] / ln(1 + r)<br>
+                n = [ ln(${fv} &times; ${r_bln_cetak}% + ${s}) - ln(${m} &times; ${r_bln_cetak}% + ${s}) ] / ln(1 + ${r_bln_cetak}%)<br>
+                <b>n = ${n.toFixed(2)} Bulan</b> (Dibulatkan: ${Math.ceil(n)} Bulan)
+            `;
+        }
+        document.getElementById('mathTextDarurat').innerHTML = mathHtml;
+
+        renderChartDarurat(m, s, r_bln, Math.ceil(n)); document.getElementById('resSectionDarurat').style.display="block";
+        setTimeout(() => { document.getElementById('resSectionDarurat').scrollIntoView({behavior: 'smooth', block: 'start'}); }, 200);
+    }
+
+    function hitungPensiun() {
+        let u=parseFloat(document.getElementById('usia').value), p=parseRupiah(document.getElementById('pengeluaran').value), m=parseRupiah(document.getElementById('modal').value), s=parseRupiah(document.getElementById('nabung').value), inf=parseFloat(document.getElementById('inflasi').value)/100, ret=parseFloat(document.getElementById('returnInv').value)/100;
+        if(!u||!p||!s||isNaN(inf)||isNaN(ret)) { Swal.fire({icon: 'error', title: 'Data Tidak Lengkap!', text: 'Mohon isi seluruh parameter numerik yang diminta.'}); return; }
+        
+        let real_ret = ((1+ret)/(1+inf))-1; 
+        if(real_ret<=0) { Swal.fire({icon: 'warning', title: 'Peringatan Fatal!', text: 'Persentase Inflasi mengalahkan keuntungan investasi Anda! Anda tidak akan bisa pensiun dengan instrumen ini.'}); return; }
+        
+        let r_bln = real_ret/12, fv = p*300; let atas = (fv*r_bln)+s, bawah = (m*r_bln)+s;
+        if(atas/bawah <= 0) { Swal.fire({icon: 'error', title: 'Kapasitas Setoran Rendah!', text: 'Setoran Anda terlalu kecil untuk melawan eskalasi inflasi jangka panjang.'}); return; }
+        let n_bln = Math.log(atas/bawah)/Math.log(1+r_bln), n_thn = n_bln/12;
+        
+        animateValue("resTarget", 0, fv, 1500, "Rp "); animateValue("resWaktu", 0, Math.ceil(n_thn), 1500, "", " Tahun"); animateValue("resUsia", 0, Math.floor(u+n_thn), 1500, "", " Tahun");
+        
+        document.getElementById('insightPensiun').innerHTML=`
+            <b>Status: Peta Jalan Kemerdekaan Finansial Ditemukan!</b> Jika Anda disiplin, Anda dipastikan merdeka secara ekonomi pada usia ${Math.floor(u+n_thn)} tahun tanpa perlu bekerja lagi.<br><br>
+            <b>Kesimpulan & Arahan Strategis:</b><br>
+            Sistem kami telah memangkas ilusi keuntungan investasi Anda dengan angka inflasi sesungguhnya, menghasilkan <b>Real Return bersih sebesar ${(real_ret*100).toFixed(2)}%</b>. 
+            Misi Anda saat ini hanyalah konsisten menyetor dana setiap bulan. Apabila hasil usia pensiun di atas dirasa terlalu tua, secara matematika Anda dituntut untuk melakukan salah satu dari dua hal ini: (1) Perbesar jumlah uang yang Anda sisihkan setiap bulan, atau (2) Pindahkan modal Anda ke instrumen investasi yang tingkat untungnya (*return*) jauh lebih berani/tinggi.`;
+        
+        // FORMAT MATEMATIKA SEKOLAH
+        let mathHtml = `
+            <b>Diketahui:</b><br>
+            - Pengeluaran Impian = Rp ${p.toLocaleString('id-ID')} / bulan<br>
+            - Target Pensiun (FV) = Pengeluaran x 300 = Rp ${fv.toLocaleString('id-ID')}<br>
+            - Modal Awal (PV) = Rp ${m.toLocaleString('id-ID')}<br>
+            - Setoran Rutin (PMT) = Rp ${s.toLocaleString('id-ID')} / bulan<br>
+            - Bunga Investasi Kotor = ${(ret*100).toFixed(2)}% / tahun<br>
+            - Laju Inflasi = ${(inf*100).toFixed(2)}% / tahun<br><br>
+            <b>Ditanya:</b><br>
+            - Lama Waktu Menabung (n) & Usia Pensiun = ?<br><br>
+            <b>Dijawab:</b><br>
+            <i>Langkah 1: Mencari Keuntungan Nyata (Fisher Equation)</i><br>
+            Real Return = [ (1 + Bunga Investasi) / (1 + Inflasi) ] - 1<br>
+            Real Return = [ (1 + ${(ret*100).toFixed(2)}%) / (1 + ${(inf*100).toFixed(2)}%) ] - 1 = ${(real_ret*100).toFixed(2)}% / tahun.<br>
+            Bunga Real Bulanan (r) = ${(real_ret*100).toFixed(2)}% / 12 = ${(r_bln*100).toFixed(3)}% / bulan.<br><br>
+            <i>Langkah 2: Memecah Logaritma Natural (ln)</i><br>
+            n = [ ln(FV &times; r + PMT) - ln(PV &times; r + PMT) ] / ln(1 + r)<br>
+            n = [ ln(${fv} &times; ${(r_bln*100).toFixed(3)}% + ${s}) - ln(${m} &times; ${(r_bln*100).toFixed(3)}% + ${s}) ] / ln(1 + ${(r_bln*100).toFixed(3)}%)<br>
+            n = ${n_bln.toFixed(2)} Bulan<br>
+            <b>n = ${n_thn.toFixed(2)} Tahun</b> (Dibulatkan: ${Math.ceil(n_thn)} Tahun)
+        `;
+        document.getElementById('mathTextPensiun').innerHTML = mathHtml;
+
+        renderChartPensiun(m, s, r_bln, Math.ceil(n_thn)); document.getElementById('resSectionPensiun').style.display="block";
+        setTimeout(() => { document.getElementById('resSectionPensiun').scrollIntoView({behavior: 'smooth', block: 'start'}); }, 200);
+    }
+
+    function hitungProperti() {
+        let modal = parseRupiah(document.getElementById('modalProperti').value), pemasukan = parseRupiah(document.getElementById('pemasukanProperti').value), pengeluaran = parseRupiah(document.getElementById('pengeluaranProperti').value), oppCostRate = parseFloat(document.getElementById('oppCostRate').value);
+        if(!modal || !pemasukan || isNaN(oppCostRate)) { Swal.fire({icon: 'error', title: 'Kesalahan Input', text: 'Masukkan keseluruhan data modal dan arus kas (cashflow).'}); return; }
+        
+        let noiTahunan = (pemasukan - pengeluaran) * 12;
+        let capRate = (noiTahunan / modal) * 100;
+        let oppCostTahunan = modal * (oppCostRate / 100);
+        let selisih = noiTahunan - oppCostTahunan;
+
+        animateValue("resNOI", 0, noiTahunan, 1500, "Rp "); 
+        document.getElementById('resCapRate').innerText = capRate.toFixed(2) + "%";
+        
+        let statusBox = document.getElementById('propertiStatusCard'); 
+        let insightBox = document.getElementById('insightBoxProperti');
+        
+        if (capRate > oppCostRate) { 
+            statusBox.style.background = "linear-gradient(135deg, #166534, #22C55E)"; 
+            document.getElementById('resStatusProperti').innerText = "PROFITABLE / LAYAK"; 
+            insightBox.className = "insight-box insight-success";
+            document.getElementById('insightProperti').innerHTML = `
+                <b>Evaluasi Matematika: Kondisi Sehat dan Rasional.</b><br> 
+                Tingkat pengembalian properti Anda (Cap Rate) terbukti <b>MENGALAHKAN</b> tingkat keuntungan instrumen aman di pasar modal (Opportunity Cost).<br><br>
+                <b>Kesimpulan & Rekomendasi:</b><br>
+                Dedikasi Anda dalam mengelola properti tidak sia-sia. Aset Anda menghasilkan <b>Surplus Untung Bersih sebesar Rp ${selisih.toLocaleString('id-ID')} / tahun</b> (yang mana angka ini adalah bonus/imbalan di atas standar keuntungan jika Anda hanya menabung sambil santai). Keputusan finansial Anda terhadap bisnis ini sudah tepat, sangat disarankan untuk dilanjutkan atau diperluas.`; 
+        } else { 
+            statusBox.style.background = "linear-gradient(135deg, #B91C1C, #EF4444)"; 
+            document.getElementById('resStatusProperti').innerText = "INEFISIEN (MERUGI)"; 
+            insightBox.className = "insight-box insight-danger";
+            document.getElementById('insightProperti').innerHTML = `
+                <b>Evaluasi Matematika: Terjadi Inefisiensi Modal (Kerugian Peluang).</b><br>
+                Tingkat pengembalian tahunan properti Anda (Cap Rate) terdeteksi <b>BERADA DI BAWAH</b> batas aman (Opportunity Cost).<br><br>
+                <b>Kesimpulan & Rekomendasi:</b><br>
+                Meskipun properti ini menghasilkan uang tunai, secara logika finansial tingkat atas, investasi ini tidak memadai. Anda telah membuang tenaga operasional, padahal Anda bisa bersantai dan menerima untung yang lebih besar hanya dengan menyimpan modal tersebut di instrumen tanpa risiko. Anda kehilangan potensi pendapatan bersih <b>Rp ${Math.abs(selisih).toLocaleString('id-ID')} setiap tahunnya</b>.<br>
+                <b>Arahan:</b> Properti ini tidak disarankan untuk dibeli. Jika sudah terlanjur beroperasi, Anda dituntut secara ekonomi untuk menaikkan harga tarif layanan secara radikal, atau mempertimbangkan pelepasan (penjualan) aset untuk direalokasi ke instrumen pasar modal murni.`; 
+        }
+
+        // FORMAT MATEMATIKA SEKOLAH
+        let mathHtml = `
+            <b>Diketahui:</b><br>
+            - Modal Capex = Rp ${modal.toLocaleString('id-ID')}<br>
+            - Pemasukan Kotor = Rp ${pemasukan.toLocaleString('id-ID')} / bulan<br>
+            - Pengeluaran (Opex) = Rp ${pengeluaran.toLocaleString('id-ID')} / bulan<br>
+            - Bunga Pembanding (Opp Cost) = ${oppCostRate}% / tahun<br><br>
+            <b>Ditanya:</b><br>
+            - Net Operating Income (NOI) = ?<br>
+            - Cap Rate = ?<br>
+            - Rasio Keputusan = ?<br><br>
+            <b>Dijawab:</b><br>
+            <i>Langkah 1: Menghitung Keuntungan Tahunan</i><br>
+            NOI = (Pemasukan - Pengeluaran) &times; 12<br>
+            NOI = (Rp ${pemasukan.toLocaleString('id-ID')} - Rp ${pengeluaran.toLocaleString('id-ID')}) &times; 12 = <b>Rp ${noiTahunan.toLocaleString('id-ID')}</b><br><br>
+            <i>Langkah 2: Menghitung Persentase Hasil</i><br>
+            Cap Rate = (NOI / Modal Capex) &times; 100%<br>
+            Cap Rate = (Rp ${noiTahunan.toLocaleString('id-ID')} / Rp ${modal.toLocaleString('id-ID')}) &times; 100% = <b>${capRate.toFixed(2)}%</b><br><br>
+            <i>Langkah 3: Putusan Mutlak (Decision Logic)</i><br>
+            Opportunity Cost = Modal &times; Bunga Pembanding = Rp ${oppCostTahunan.toLocaleString('id-ID')} / tahun.<br>
+            Syarat Untung: Cap Rate > Opportunity Cost. (${capRate.toFixed(2)}% vs ${oppCostRate}%)
+        `;
+        document.getElementById('mathTextProperti').innerHTML = mathHtml;
+
+        document.getElementById('resSectionProperti').style.display = "block";
+        setTimeout(() => { document.getElementById('resSectionProperti').scrollIntoView({behavior: 'smooth', block: 'start'}); }, 200);
+    }
+
+    function hitungEdukasi() {
+        let biayaKini = parseRupiah(document.getElementById('biayaEdukasi').value), waktuThn = parseFloat(document.getElementById('waktuEdukasi').value), inflasiRate = parseFloat(document.getElementById('inflasiEdukasi').value) / 100, modal = parseRupiah(document.getElementById('modalEdukasi').value), investRate = parseFloat(document.getElementById('returnEdukasi').value) / 100;
+        if(!biayaKini || !waktuThn || isNaN(inflasiRate) || isNaN(investRate)) { Swal.fire({icon: 'error', title: 'Data Kurang', text: 'Pastikan seluruh parameter pendidikan dan investasi diisi.'}); return; }
+        
+        let fvBiaya = biayaKini * Math.pow((1 + inflasiRate), waktuThn), fvModal = modal * Math.pow((1 + investRate), waktuThn), shortfall = fvBiaya - fvModal, pmtBulan = 0, totalMurni = modal;
+        let insightBox = document.getElementById('insightBoxEdukasi');
+        
+        if (shortfall > 0) { 
+            let r_bulan = investRate / 12, n_bulan = waktuThn * 12; 
+            pmtBulan = (shortfall * r_bulan) / (Math.pow(1 + r_bulan, n_bulan) - 1); 
+            totalMurni = modal + (pmtBulan * n_bulan); 
+            
+            insightBox.className = "insight-box insight-edukasi";
+            document.getElementById('insightEdukasi').innerHTML = `
+                <b>Status Defisit: Mesin Inflasi Pendidikan Terdeteksi!</b><br> 
+                Model perhitungan majemuk mengeskalasi biaya mendaftar universitas dari angka normal menjadi <b>Rp ${fvBiaya.toLocaleString('id-ID', {maximumFractionDigits:0})}</b> pada waktu anak Anda mendaftar nanti.<br><br>
+                <b>Kesimpulan & Tindakan Mutlak Orang Tua:</b><br>
+                Nilai kekayaan Anda akan terus dihancurkan jika hanya ditumpuk di laci kasur atau celengan ayam. Untuk menghindari hancurnya rencana pendidikan tinggi sang anak akibat inflasi yang tidak wajar ini, hukum matematika <i>Reverse Annuity</i> menetapkan bahwa Anda <b>WAJIB RUTIN MENYETORKAN Rp ${pmtBulan.toLocaleString('id-ID', {maximumFractionDigits:0})} per bulan</b> tanpa terputus ke dalam sistem investasi berbunga. Keterlambatan waktu menabung akan menyebabkan setoran bulanan ini semakin melonjak mencekik leher.`; 
+        } else { 
+            insightBox.className = "insight-box insight-success";
+            document.getElementById('insightEdukasi').innerHTML = `
+                <b>Status: Zona Aman!</b> Cadangan dana pendidikan (*Present Value*) Anda saat ini dinyatakan sudah memadai.<br><br>
+                <b>Kesimpulan:</b><br>
+                Pertumbuhan logaritmik modal Anda diproyeksikan akan sukses menyalip dan melampaui inflasi perguruan tinggi di masa depan tanpa perlu adanya tambahan beban setoran bulanan.`; 
+        }
+        
+        animateValue("resTargetEdukasi", 0, fvBiaya, 1500, "Rp "); animateValue("resSetoranEdukasi", 0, pmtBulan, 1500, "Rp "); animateValue("resMurniEdukasi", 0, totalMurni, 1500, "Rp ");
+        
+        // FORMAT MATEMATIKA SEKOLAH
+        let r_cetak = (investRate * 100).toFixed(2);
+        let r_bln_cetak = ((investRate / 12) * 100).toFixed(3);
+        let mathHtml = `
+            <b>Diketahui:</b><br>
+            - Harga Kampus Saat Ini (PV Biaya) = Rp ${biayaKini.toLocaleString('id-ID')}<br>
+            - Sisa Waktu (n) = ${waktuThn} Tahun (${waktuThn * 12} Bulan)<br>
+            - Laju Inflasi Kampus (i) = ${(inflasiRate*100).toFixed(2)}% / tahun<br>
+            - Modal Saat Ini (PV Investasi) = Rp ${modal.toLocaleString('id-ID')}<br>
+            - Bunga Investasi = ${r_cetak}% / tahun &nbsp;&rarr;&nbsp; Bunga Bulanan (r) = ${r_bln_cetak}%<br><br>
+            <b>Ditanya:</b><br>
+            - Harga Kampus Asli Nanti (FV Biaya) = ?<br>
+            - Setoran Wajib Bulanan (PMT) = ?<br><br>
+            <b>Dijawab:</b><br>
+            <i>Langkah 1: Ekskalasi Harga Masa Depan</i><br>
+            FV Biaya = PV Biaya &times; (1 + i)<sup>n</sup><br>
+            FV Biaya = Rp ${biayaKini.toLocaleString('id-ID')} &times; (1 + ${(inflasiRate*100).toFixed(2)}%)<sup>${waktuThn}</sup> = <b>Rp ${fvBiaya.toLocaleString('id-ID', {maximumFractionDigits:0})}</b><br><br>
+            <i>Langkah 2: Menghitung Pertumbuhan Modal Awal</i><br>
+            FV Modal = PV Investasi &times; (1 + Bunga)<sup>n</sup> = Rp ${fvModal.toLocaleString('id-ID', {maximumFractionDigits:0})}<br>
+            Shortfall (Total Kekurangan Dana) = FV Biaya - FV Modal = Rp ${shortfall > 0 ? shortfall.toLocaleString('id-ID', {maximumFractionDigits:0}) : 0}<br><br>
+        `;
+        if (shortfall > 0) {
+            mathHtml += `
+            <i>Langkah 3: Membalikkan Anuitas (Reverse Annuity)</i><br>
+            PMT = (Shortfall &times; r) / ((1 + r)<sup>bulan</sup> - 1)<br>
+            PMT = (Rp ${shortfall.toLocaleString('id-ID', {maximumFractionDigits:0})} &times; ${r_bln_cetak}%) / ((1 + ${r_bln_cetak}%)<sup>${waktuThn * 12}</sup> - 1)<br>
+            <b>PMT (Setoran Wajib) = Rp ${pmtBulan.toLocaleString('id-ID', {maximumFractionDigits:0})} / bulan.</b>
+            `;
+        } else {
+            mathHtml += `<i>Karena Shortfall <= 0, PMT = Rp 0 (Dana Sudah Mencukupi).</i>`;
+        }
+        document.getElementById('mathTextEdukasi').innerHTML = mathHtml;
+
+        renderChartEdukasi(biayaKini, inflasiRate, waktuThn, modal, pmtBulan, investRate); document.getElementById('resSectionEdukasi').style.display = "block";
+        setTimeout(() => { document.getElementById('resSectionEdukasi').scrollIntoView({behavior: 'smooth', block: 'start'}); }, 200);
+    }
+
+    function renderChartDarurat(pv, pmt, r_bulan, n_bulan) { let l=[], de=[], dl=[]; let cb=pv, cl=pv; for(let i=0; i<=n_bulan; i++) { l.push("Bln "+i); de.push(cb); dl.push(cl); cb=(cb*(1+r_bulan))+pmt; cl=cl+pmt; } if(daruratChartInstance) daruratChartInstance.destroy(); daruratChartInstance = new Chart(document.getElementById('chartDarurat').getContext('2d'), { type:'line', data:{ labels:l, datasets:[{label:'Investasi Berbunga', data:de, borderColor:'#F26E21', backgroundColor:'rgba(242, 110, 33, 0.1)', fill:true, tension:0.4},{label:'Tanpa Bunga (Uang Menganggur)', data:dl, borderColor:'#607D8B', borderDash:[5,5], fill:false, tension:0.4}] }, options:{ responsive:true } }); }
+    function renderChartPensiun(pv, pmt_bulan, real_r_bulan, n_tahun) { let l=[], de=[], dl=[]; let cb=pv, cl=pv; let p_thn=pmt_bulan*12, r_thn=Math.pow(1+real_r_bulan,12)-1; for(let i=0; i<=n_tahun; i++) { l.push("Thn "+i); de.push(cb); dl.push(cl); cb=(cb*(1+r_thn))+p_thn; cl=cl+p_thn; } if(pensiunChartInstance) pensiunChartInstance.destroy(); pensiunChartInstance = new Chart(document.getElementById('chartPensiun').getContext('2d'), { type:'line', data:{ labels:l, datasets:[{label:'Keuntungan Bersih vs Waktu (Real Return)', data:de, borderColor:'#0056A8', backgroundColor:'rgba(0, 86, 168, 0.1)', fill:true, tension:0.4},{label:'Uang yang Dihanguskan Inflasi', data:dl, borderColor:'#FF5252', borderDash:[5,5], fill:false, tension:0.4}] }, options:{ responsive:true } }); }
+    function renderChartEdukasi(biayaKini, infRate, tahun, pv, pmt_bulan, invRate) { let labels=[], dataBiaya=[], dataInvest=[]; let curBiaya = biayaKini, curInvest = pv; let pmt_thn = pmt_bulan * 12; for(let i=0; i<=tahun; i++) { labels.push("Thn "+i); dataBiaya.push(curBiaya); dataInvest.push(curInvest); curBiaya = curBiaya * (1 + infRate); curInvest = (curInvest * (1 + invRate)) + pmt_thn; } if(edukasiChartInstance) edukasiChartInstance.destroy(); edukasiChartInstance = new Chart(document.getElementById('chartEdukasi').getContext('2d'), { type:'line', data:{ labels:labels, datasets:[{label:'Eskalasi Biaya Universitas (Dampak Inflasi)', data:dataBiaya, borderColor:'#EF4444', backgroundColor:'rgba(239, 68, 68, 0.1)', borderDash:[5,5], fill:false, tension:0.4, borderWidth: 2}, {label:'Kekuatan Uang Anda (Efek Investasi)', data:dataInvest, borderColor:'#A855F7', backgroundColor:'rgba(168, 85, 247, 0.1)', fill:true, tension:0.4, borderWidth: 3}] }, options:{ responsive:true } }); }
+
+    function createGlobalLeaf() {
+        const leaf = document.createElement('div');
+        leaf.classList.add('falling-leaf-global');
+        
+        const autumnColors = ['#D9534F', '#F0AD4E', '#EC971F', '#C9302C', '#FFC107', '#A62F03'];
+        const randomColor = autumnColors[Math.floor(Math.random() * autumnColors.length)];
+        leaf.style.backgroundColor = randomColor;
+
+        leaf.style.left = Math.random() * 100 + 'vw'; 
+        const duration = Math.random() * 5 + 6; 
+        const delay = Math.random() * 2;
+        const fallDrift = (Math.random() - 0.5) * 300; 
+        const fallRotate = Math.random() * 720; 
+
+        leaf.style.setProperty('--fall-drift', fallDrift + 'px');
+        leaf.style.setProperty('--fall-rotate', fallRotate + 'deg');
+        leaf.style.animation = `fall-global ${duration}s linear ${delay}s forwards`;
+
+        document.body.appendChild(leaf);
+        setTimeout(() => { leaf.remove(); }, (duration + delay) * 1000);
+    }
+    setInterval(createGlobalLeaf, 400); 
+</script>
+</body>
+</html>
